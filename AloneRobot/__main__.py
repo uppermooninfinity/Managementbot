@@ -324,6 +324,7 @@ def help_button(update, context):
                 [
                    InlineKeyboardButton(text="ʙᴀᴄᴋ", callback_data="help_back"),
                 ]
+            ),
             )
 
         elif prev_match:
