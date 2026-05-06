@@ -160,7 +160,7 @@ telethn = TelegramClient("alone", API_ID, API_HASH)
 pbot = Client("AloneRobot", api_id=API_ID, api_hash=API_HASH, bot_token=TOKEN,in_memory=True)
 dispatcher = updater.dispatcher
 aiohttpsession = ClientSession()
-YouTube = YouTubeAPI()
+
 
 print("[INFO]: Getting Bot Info...")
 BOT_ID = dispatcher.bot.id
