@@ -30,7 +30,6 @@ markdown2==2.5.0
 MukeshAPI
 motor==3.6.0
 nekos.py
-ntgcalls==1.1.2
 opencv-python
 pretty-errors
 pydictionary==2.0.1
@@ -42,7 +41,6 @@ pyrate-limiter==2.10.0
 pyshorteners
 pyrogram==2.0.106
 python-telegram-bot==13.15
-git+https://github.com/pytgcalls/pytgcalls.git@master
 regex==2024.5.15
 requests==2.32.3
 search_engine_parser==0.6.8
@@ -56,6 +54,5 @@ wikipedia==1.4.0
 wget
 yt_dlp
 youtube_search
-py-yt-search==0.6.2
 youtube_search_python
-psycopg2-binary==2.9.11
+psycopg2
