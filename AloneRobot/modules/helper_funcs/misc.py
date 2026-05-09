@@ -1,6 +1,7 @@
 from math import ceil
 from typing import Dict, List
 from uuid import uuid4
+from functools import wraps
 
 from telegram import (
     MAX_MESSAGE_LENGTH,
@@ -10,10 +11,11 @@ from telegram import (
     InlineQueryResultArticle,
     InputTextMessageContent,
     ParseMode,
+    Update,
 )
 from telegram.error import TelegramError
 
-from AloneRobot import NO_LOAD
+from AloneRobot import NO_LOAD, OWNER_ID
 
 
 class EqInlineKeyboardButton(InlineKeyboardButton):
@@ -34,6 +36,7 @@ def split_message(msg: str) -> List[str]:
     lines = msg.splitlines(True)
     small_msg = ""
     result = []
+
     for line in lines:
         if len(small_msg) + len(line) < MAX_MESSAGE_LENGTH:
             small_msg += line
@@ -41,21 +44,21 @@ def split_message(msg: str) -> List[str]:
             result.append(small_msg)
             small_msg = line
     else:
-        # Else statement at the end of the for loop, so append the leftover string.
         result.append(small_msg)
 
     return result
 
 
+# =========================
+# 3x3 MODULE GRID PAGINATION
+# =========================
 def paginate_modules(page_n: int, module_dict: Dict, prefix, chat=None) -> List:
     if not chat:
         modules = sorted(
             [
                 EqInlineKeyboardButton(
                     x.__mod_name__,
-                    callback_data="{}_module({})".format(
-                        prefix, x.__mod_name__.lower()
-                    ),
+                    callback_data=f"{prefix}_module({x.__mod_name__.lower()})",
                 )
                 for x in module_dict.values()
             ]
@@ -65,42 +68,52 @@ def paginate_modules(page_n: int, module_dict: Dict, prefix, chat=None) -> List:
             [
                 EqInlineKeyboardButton(
                     x.__mod_name__,
-                    callback_data="{}_module({},{})".format(
-                        prefix, chat, x.__mod_name__.lower()
-                    ),
+                    callback_data=f"{prefix}_module({chat},{x.__mod_name__.lower()})",
                 )
                 for x in module_dict.values()
             ]
         )
 
-    pairs = [modules[i * 3 : (i + 1) * 3] for i in range((len(modules) + 3 - 1) // 3)]
+    # 3 buttons per row
+    pairs = [modules[i:i + 3] for i in range(0, len(modules), 3)]
 
-    round_num = len(modules) / 3
-    calc = len(modules) - round(round_num)
-    if calc in [1, 2]:
-        pairs.append((modules[-1],))
+    # 3 rows per page = 9 buttons
+    max_num_pages = ceil(len(pairs) / 3)
 
-    max_num_pages = ceil(len(pairs) / 4)
+    if max_num_pages == 0:
+        max_num_pages = 1
+
     modulo_page = page_n % max_num_pages
 
-    # can only have a certain amount of buttons side by side
-    if len(pairs) > 3:
-        pairs = pairs[modulo_page * 6: 6* (modulo_page + 1)] + [
-            (
-                EqInlineKeyboardButton(
-                    "◁", callback_data="{}_prev({})".format(prefix, modulo_page)
-                ),
-                EqInlineKeyboardButton(
-                    "• ʜᴏᴍᴇ •", callback_data="alone_back"
-                ),
-                EqInlineKeyboardButton(
-                    "▷", callback_data="{}_next({})".format(prefix, modulo_page)
-                ),
-            )
-        ]
+    pairs = pairs[modulo_page * 3 : (modulo_page + 1) * 3]
 
+    # Navigation buttons
+    if max_num_pages > 1:
+        pairs.append(
+            [
+                EqInlineKeyboardButton(
+                    "◁",
+                    callback_data=f"{prefix}_prev({modulo_page})",
+                ),
+                EqInlineKeyboardButton(
+                    "• ʜᴏᴍᴇ •",
+                    callback_data="alone_back",
+                ),
+                EqInlineKeyboardButton(
+                    "▷",
+                    callback_data=f"{prefix}_next({modulo_page})",
+                ),
+            ]
+        )
     else:
-        pairs += [[EqInlineKeyboardButton("• ʙᴀᴄᴋ •", callback_data="alone_back")]]
+        pairs.append(
+            [
+                EqInlineKeyboardButton(
+                    "• ʙᴀᴄᴋ •",
+                    callback_data="alone_back",
+                )
+            ]
+        )
 
     return pairs
 
@@ -132,49 +145,96 @@ def send_to_list(
 ) -> None:
     if html and markdown:
         raise Exception("Can only send with either markdown or HTML!")
+
     for user_id in set(send_to):
         try:
             if markdown:
-                bot.send_message(user_id, message, parse_mode=ParseMode.MARKDOWN)
+                bot.send_message(
+                    user_id,
+                    message,
+                    parse_mode=ParseMode.MARKDOWN,
+                )
             elif html:
-                bot.send_message(user_id, message, parse_mode=ParseMode.HTML)
+                bot.send_message(
+                    user_id,
+                    message,
+                    parse_mode=ParseMode.HTML,
+                )
             else:
                 bot.send_message(user_id, message)
+
         except TelegramError:
-            pass  # ignore users who fail
+            pass
 
 
 def build_keyboard(buttons):
     keyb = []
+
     for btn in buttons:
         if btn.same_line and keyb:
-            keyb[-1].append(InlineKeyboardButton(btn.name, url=btn.url))
+            keyb[-1].append(
+                InlineKeyboardButton(
+                    btn.name,
+                    url=btn.url,
+                )
+            )
         else:
-            keyb.append([InlineKeyboardButton(btn.name, url=btn.url)])
+            keyb.append(
+                [
+                    InlineKeyboardButton(
+                        btn.name,
+                        url=btn.url,
+                    )
+                ]
+            )
 
     return keyb
 
 
 def revert_buttons(buttons):
     res = ""
+
     for btn in buttons:
         if btn.same_line:
-            res += "\n[{}](buttonurl://{}:same)".format(btn.name, btn.url)
+            res += "\n[{}](buttonurl://{}:same)".format(
+                btn.name,
+                btn.url,
+            )
         else:
-            res += "\n[{}](buttonurl://{})".format(btn.name, btn.url)
+            res += "\n[{}](buttonurl://{})".format(
+                btn.name,
+                btn.url,
+            )
 
     return res
 
 
 def build_keyboard_parser(bot, chat_id, buttons):
     keyb = []
+
     for btn in buttons:
         if btn.url == "{rules}":
-            btn.url = "http://t.me/{}?start={}".format(bot.username, chat_id)
+            btn.url = "http://t.me/{}?start={}".format(
+                bot.username,
+                chat_id,
+            )
+
         if btn.same_line and keyb:
-            keyb[-1].append(InlineKeyboardButton(btn.name, url=btn.url))
+            keyb[-1].append(
+                InlineKeyboardButton(
+                    btn.name,
+                    url=btn.url,
+                )
+            )
         else:
-            keyb.append([InlineKeyboardButton(btn.name, url=btn.url)])
+            keyb.append(
+                [
+                    InlineKeyboardButton(
+                        btn.name,
+                        url=btn.url,
+                    )
+                ]
+            )
 
     return keyb
 
@@ -183,21 +243,33 @@ def user_bot_owner(func):
     @wraps(func)
     def is_user_bot_owner(bot: Bot, update: Update, *args, **kwargs):
         user = update.effective_user
+
         if user and user.id == OWNER_ID:
             return func(bot, update, *args, **kwargs)
-        else:
-            pass
 
     return is_user_bot_owner
 
 
 def build_keyboard_alternate(buttons):
     keyb = []
+
     for btn in buttons:
         if btn[2] and keyb:
-            keyb[-1].append(InlineKeyboardButton(btn[0], url=btn[1]))
+            keyb[-1].append(
+                InlineKeyboardButton(
+                    btn[0],
+                    url=btn[1],
+                )
+            )
         else:
-            keyb.append([InlineKeyboardButton(btn[0], url=btn[1])])
+            keyb.append(
+                [
+                    InlineKeyboardButton(
+                        btn[0],
+                        url=btn[1],
+                    )
+                ]
+            )
 
     return keyb
 
