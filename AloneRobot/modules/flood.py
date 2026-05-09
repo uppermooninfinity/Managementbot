@@ -18,7 +18,6 @@ from telegram.ext import (
 from telegram.utils.helpers import mention_html
 
 from AloneRobot import TIGERS, WOLVES, dispatcher
-from AloneRobot.modules.helper_funcs.alternate import send_message
 from AloneRobot.modules.helper_funcs.chat_status import (
     bot_admin,
     is_user_admin,
@@ -79,7 +78,7 @@ def check_flood(update: Update, context: CallbackContext) -> str:
                 "kicked": 0,
             }
 
-        mode, value = sql.get_flood_setting(chat.id)
+        mode, _ = sql.get_flood_setting(chat.id)
 
         # ʙᴀɴ
         if mode == 1:
@@ -214,7 +213,7 @@ def antiflood(update: Update, context: CallbackContext):
 
         limit = sql.get_flood_limit(chat.id)
 
-        mode, value = sql.get_flood_setting(chat.id)
+        mode, _ = sql.get_flood_setting(chat.id)
 
         if limit == 0:
             status = "ᴅɪsᴀʙʟᴇᴅ"
@@ -373,4 +372,4 @@ __handlers__ = [
     (CHECK_FLOOD_HANDLER, FLOOD_GROUP),
     ANTIFLOOD_HANDLER,
     FLOODFREQ_HANDLER,
-            ]
+]
