@@ -48,6 +48,7 @@ def split_message(msg: str) -> List[str]:
 
 
 def paginate_modules(page_n: int, module_dict: Dict, prefix, chat=None) -> List:
+    """Create a 3x3 grid pagination for help buttons"""
     if not chat:
         modules = sorted(
             [
@@ -73,36 +74,38 @@ def paginate_modules(page_n: int, module_dict: Dict, prefix, chat=None) -> List:
             ]
         )
 
+    # Create 3x3 grid (3 buttons per row, 3 rows per page = 9 buttons per page)
     pairs = [modules[i * 3 : (i + 1) * 3] for i in range((len(modules) + 3 - 1) // 3)]
 
-    round_num = len(modules) / 3
-    calc = len(modules) - round(round_num)
-    if calc in [1, 2]:
-        pairs.append((modules[-1],))
+    max_num_pages = ceil(len(pairs) / 1)
+    modulo_page = page_n % max_num_pages if max_num_pages > 0 else 0
 
-    max_num_pages = ceil(len(pairs) / 4)
-    modulo_page = page_n % max_num_pages
-
-    # can only have a certain amount of buttons side by side
-    if len(pairs) > 3:
-        pairs = pairs[modulo_page * 6: 6* (modulo_page + 1)] + [
-            (
-                EqInlineKeyboardButton(
-                    "◁", callback_data="{}_prev({})".format(prefix, modulo_page)
-                ),
-                EqInlineKeyboardButton(
-                    "• ʜᴏᴍᴇ •", callback_data="alone_back"
-                ),
-                EqInlineKeyboardButton(
-                    "▷", callback_data="{}_next({})".format(prefix, modulo_page)
-                ),
-            )
+    # Handle pagination with 3x3 grid
+    if len(pairs) > 1:
+        # Get current page (single page of 3x3 grid)
+        current_page_buttons = pairs[modulo_page] if modulo_page < len(pairs) else pairs[0]
+        
+        # Create navigation row
+        nav_buttons = [
+            EqInlineKeyboardButton(
+                "◁", callback_data="{}_prev({})".format(prefix, modulo_page)
+            ),
+            EqInlineKeyboardButton(
+                "ʜᴏᴍᴇ", callback_data="alone_back"
+            ),
+            EqInlineKeyboardButton(
+                "▷", callback_data="{}_next({})".format(prefix, modulo_page)
+            ),
         ]
-
+        
+        result = [list(current_page_buttons)] if len(current_page_buttons) > 0 else []
+        result.append(nav_buttons)
+        return result
     else:
-        pairs += [[EqInlineKeyboardButton("• ʙᴀᴄᴋ •", callback_data="alone_back")]]
-
-    return pairs
+        # Single page - no pagination needed
+        result = [list(pairs[0])] if pairs and len(pairs[0]) > 0 else []
+        result.append([EqInlineKeyboardButton("ʙᴀᴄᴋ", callback_data="help_back")])
+        return result
 
 
 def article(
@@ -177,18 +180,6 @@ def build_keyboard_parser(bot, chat_id, buttons):
             keyb.append([InlineKeyboardButton(btn.name, url=btn.url)])
 
     return keyb
-
-
-def user_bot_owner(func):
-    @wraps(func)
-    def is_user_bot_owner(bot: Bot, update: Update, *args, **kwargs):
-        user = update.effective_user
-        if user and user.id == OWNER_ID:
-            return func(bot, update, *args, **kwargs)
-        else:
-            pass
-
-    return is_user_bot_owner
 
 
 def build_keyboard_alternate(buttons):
