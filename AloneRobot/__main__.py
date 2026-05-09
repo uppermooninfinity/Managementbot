@@ -321,10 +321,8 @@ def help_button(update, context):
               caption=text,
               parse_mode=ParseMode.MARKDOWN,
               reply_markup=InlineKeyboardMarkup(
-                [
-                   InlineKeyboardButton(text="ʙᴀᴄᴋ", callback_data="help_back"),
-                ]
-            ),
+                    [[InlineKeyboardButton(text="ʙᴀᴄᴋ", callback_data="help_back"),InlineKeyboardButton(text="sᴜᴘᴘᴏʀᴛ", callback_data="alone_support")]]
+                ),
             )
 
         elif prev_match:
