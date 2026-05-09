@@ -74,38 +74,48 @@ def paginate_modules(page_n: int, module_dict: Dict, prefix, chat=None) -> List:
             ]
         )
 
-    # Create 3x3 grid (3 buttons per row, 3 rows per page = 9 buttons per page)
-    pairs = [modules[i * 3 : (i + 1) * 3] for i in range((len(modules) + 3 - 1) // 3)]
+    # Create 3x3 grid - 3 buttons per row
+    pairs = []
+    for i in range(0, len(modules), 3):
+        pairs.append(modules[i : i + 3])
 
-    max_num_pages = ceil(len(pairs) / 1)
-    modulo_page = page_n % max_num_pages if max_num_pages > 0 else 0
+    # Handle pagination - show one page (3x3 grid) at a time
+    num_pages = len(pairs) if pairs else 1
+    page_n = page_n % num_pages if num_pages > 0 else 0
 
-    # Handle pagination with 3x3 grid
+    # Build keyboard with current page
+    keyboard = []
+    if pairs:
+        # Add current page buttons (up to 3x3)
+        for row in pairs[page_n]:
+            keyboard.append([row])
+
+    # Add navigation row
     if len(pairs) > 1:
-        # Get current page (single page of 3x3 grid)
-        current_page_buttons = pairs[modulo_page] if modulo_page < len(pairs) else pairs[0]
-        
-        # Create navigation row
-        nav_buttons = [
+        nav_row = []
+        if page_n > 0:
+            nav_row.append(
+                EqInlineKeyboardButton(
+                    "◀️", callback_data="{}_prev({})".format(prefix, page_n)
+                )
+            )
+        nav_row.append(
             EqInlineKeyboardButton(
-                "◁", callback_data="{}_prev({})".format(prefix, modulo_page)
-            ),
-            EqInlineKeyboardButton(
-                "ʜᴏᴍᴇ", callback_data="alone_back"
-            ),
-            EqInlineKeyboardButton(
-                "▷", callback_data="{}_next({})".format(prefix, modulo_page)
-            ),
-        ]
-        
-        result = [list(current_page_buttons)] if len(current_page_buttons) > 0 else []
-        result.append(nav_buttons)
-        return result
+                "ʜᴏᴍᴇ", callback_data="help_back"
+            )
+        )
+        if page_n < len(pairs) - 1:
+            nav_row.append(
+                EqInlineKeyboardButton(
+                    "▶️", callback_data="{}_next({})".format(prefix, page_n)
+                )
+            )
+        keyboard.append(nav_row)
     else:
-        # Single page - no pagination needed
-        result = [list(pairs[0])] if pairs and len(pairs[0]) > 0 else []
-        result.append([EqInlineKeyboardButton("ʙᴀᴄᴋ", callback_data="help_back")])
-        return result
+        # Single page - add back button
+        keyboard.append([EqInlineKeyboardButton("ʙᴀᴄᴋ", callback_data="help_back")])
+
+    return keyboard
 
 
 def article(
