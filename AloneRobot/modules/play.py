@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 
+from AloneRobot import pbot as alone 
+
 from pyrogram import Client, filters
 from pyrogram.types import (
     InlineKeyboardMarkup,
@@ -40,14 +42,6 @@ from AloneRobot.modules.call import (
 )
 
 API_BASE = "http://45.77.174.241:9090"
-
-bot = Client(
-    "AloneRobotBot",
-    api_id=API_ID,
-    api_hash=API_HASH,
-    bot_token=TOKEN,
-)
-
 
 @dataclass
 class Track:
@@ -562,7 +556,7 @@ async def play_handler(_, message: Message):
         await processing.edit_text(f"❌ **Error:** {str(e)}")
 
 
-@bot.on_message(filters.command("pause"))
+@alone.on_message(filters.command("pause"))
 async def pause_handler(_, message: Message):
     """Handle /pause command"""
     try:
@@ -576,7 +570,7 @@ async def pause_handler(_, message: Message):
         await message.reply_text(f"❌ **Error:** {str(e)}")
 
 
-@bot.on_message(filters.command("resume"))
+@alone.on_message(filters.command("resume"))
 async def resume_handler(_, message: Message):
     """Handle /resume command"""
     try:
@@ -590,7 +584,7 @@ async def resume_handler(_, message: Message):
         await message.reply_text(f"❌ **Error:** {str(e)}")
 
 
-@bot.on_message(filters.command(["stop", "end"]))
+@alone.on_message(filters.command(["stop", "end"]))
 async def stop_handler(_, message: Message):
     """Handle /stop command"""
     try:
@@ -615,7 +609,7 @@ async def stop_handler(_, message: Message):
         await message.reply_text(f"❌ **Error:** {str(e)}")
 
 
-@bot.on_message(filters.command("skip"))
+@alone.on_message(filters.command("skip"))
 async def skip_handler(_, message: Message):
     """Handle /skip command"""
     try:
@@ -628,7 +622,7 @@ async def skip_handler(_, message: Message):
         await message.reply_text(f"❌ **Error:** {str(e)}")
 
 
-@bot.on_message(filters.command("previous"))
+@alone.on_message(filters.command("previous"))
 async def previous_handler(_, message: Message):
     """Handle /previous command"""
     try:
@@ -641,7 +635,7 @@ async def previous_handler(_, message: Message):
         await message.reply_text(f"❌ **Error:** {str(e)}")
 
 
-@bot.on_message(filters.command("seek"))
+@alone.on_message(filters.command("seek"))
 async def seek_handler(_, message: Message):
     """Handle /seek command"""
     if len(message.command) < 2:
@@ -673,7 +667,7 @@ async def seek_handler(_, message: Message):
         await message.reply_text(f"❌ **Error:** {str(e)}")
 
 
-@bot.on_message(filters.command("seekback"))
+@alone.on_message(filters.command("seekback"))
 async def seekback_handler(_, message: Message):
     """Handle /seekback command"""
     if len(message.command) < 2:
@@ -700,7 +694,7 @@ async def seekback_handler(_, message: Message):
         await message.reply_text(f"❌ **Error:** {str(e)}")
 
 
-@bot.on_message(filters.command("speed"))
+@alone.on_message(filters.command("speed"))
 async def speed_handler(_, message: Message):
     """Handle /speed command"""
     if len(message.command) < 2:
@@ -728,7 +722,7 @@ async def speed_handler(_, message: Message):
         await message.reply_text(f"❌ **Error:** {str(e)}")
 
 
-@bot.on_message(filters.command("queue"))
+@alone.on_message(filters.command("queue"))
 async def queue_handler(_, message: Message):
     """Handle /queue command"""
     try:
@@ -752,7 +746,7 @@ async def queue_handler(_, message: Message):
         await message.reply_text(f"❌ **Error:** {str(e)}")
 
 
-@bot.on_message(filters.command("nowplaying"))
+@alone.on_message(filters.command("nowplaying"))
 async def nowplaying_handler(_, message: Message):
     """Handle /nowplaying command"""
     try:
@@ -782,7 +776,7 @@ async def nowplaying_handler(_, message: Message):
         await message.reply_text(f"❌ **Error:** {str(e)}")
 
 
-@bot.on_message(filters.command("stats"))
+@alone.on_message(filters.command("mstats"))
 async def stats_handler(_, message: Message):
     """Handle /stats command"""
     try:
@@ -802,7 +796,7 @@ async def stats_handler(_, message: Message):
         await message.reply_text(f"❌ **Error:** {str(e)}")
 
 
-@bot.on_callback_query()
+@alone.on_callback_query()
 async def callbacks(_, query: CallbackQuery):
     """Handle callback queries"""
     chat_id = query.message.chat.id
