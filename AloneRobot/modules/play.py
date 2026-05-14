@@ -25,7 +25,7 @@ from pytgcalls.types.stream import StreamAudioEnded
 from youtubesearchpython.__future__ import VideosSearch
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
-from config import API_ID, API_HASH, TOKEN, STRING_SESSION
+from AloneRobot.config import API_ID, API_HASH, TOKEN, STRING_SESSION
 
 API_BASE = "http://45.77.174.241:9090"
 
