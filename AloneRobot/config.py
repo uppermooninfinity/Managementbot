@@ -5,7 +5,7 @@ class Config(object):
     # REQUIRED
     # Login to https://my.telegram.org and fill in these slots with the details given by it
 
-    API_ID = "37467897" # integer value, dont use ""
+    API_ID = 37467897  # integer value, dont use ""
     API_HASH = "b1c9ba3d6180a099e35d6498d8434bf0"
     TOKEN = ""  # This var used to be API_KEY but it is now TOKEN, adjust accordingly.
     OWNER_ID = 8364692780 # If you dont know, run the bot and do /id in your private chat with it, also an integer
@@ -42,6 +42,13 @@ class Config(object):
     TEMP_DOWNLOAD_DIRECTORY = "./"
     WORKERS = 8
     
+
+# Module-level exports for direct imports
+API_ID = Config.API_ID
+API_HASH = Config.API_HASH
+TOKEN = Config.TOKEN
+STRING_SESSION = Config.STRING_SESSION
+OWNER_ID = Config.OWNER_ID
 
 BANNED_USERS = filters.user()
 
