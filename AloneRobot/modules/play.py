@@ -529,7 +529,7 @@ async def play_handler(_, message: Message):
     processing = await message.reply_text("🔄 **Processing...**\n\nSearching for the song...")
 
     try:
-        await ensure_assistant(bot, message.chat.id)
+        await ensure_assistant(alone, message.chat.id)
 
         requester = message.from_user.mention if message.from_user else "Anonymous"
 
