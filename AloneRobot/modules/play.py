@@ -19,9 +19,7 @@ from pyrogram.types import (
 from pyrogram.errors import UserAlreadyParticipant, FloodWait
 
 from pytgcalls import PyTgCalls
-from pytgcalls.types.input_stream import AudioPiped
-from pytgcalls.types.input_stream.quality import HighQualityAudio
-from pytgcalls.exceptions import NoActiveGroupCall, GroupCallNotFound
+from pytgcalls.types import Update
 from pytgcalls.types.stream import StreamAudioEnded
 
 from youtubesearchpython.__future__ import VideosSearch
@@ -136,6 +134,7 @@ async def fetch_download_token(video_id: str):
             async with session.get(
                 f"{API_BASE}/download",
                 params={"url": video_id, "type": "audio"},
+                timeout=aiohttp.ClientTimeout(total=30)
             ) as response:
                 if response.status != 200:
                     raise Exception("Failed to get download token")
@@ -160,7 +159,7 @@ async def download_audio(video_id: str, token: str):
         file_path = os.path.join(temp_dir, f"{video_id}.raw")
 
         async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(url) as response:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=300)) as response:
                 if response.status != 200:
                     raise Exception("Failed to download stream")
 
@@ -442,28 +441,20 @@ async def update_progress(chat_id: int):
 async def play_track(chat_id: int, track: Track):
     """Play a track"""
     try:
-        headers = {
-            "X-Download-Token": track.token,
-        }
-
-        ffmpeg_parameters = (
-            f"-headers 'X-Download-Token: {track.token}' "
-            f"-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
-        )
-
-        stream = AudioPiped(
-            track.stream_url,
-            HighQualityAudio(),
-            headers=headers,
-            ffmpeg_parameters=ffmpeg_parameters,
-        )
-
+        # Use ffmpeg to play from stream URL
         try:
-            await call_py.play(chat_id, stream)
-        except NoActiveGroupCall:
-            raise Exception("❌ Start a voice chat first")
-        except GroupCallNotFound:
-            raise Exception("❌ Voice chat not found")
+            await call_py.play(
+                chat_id,
+                track.stream_url,
+                volume=100,
+            )
+        except Exception as play_error:
+            print(f"Error during play: {play_error}")
+            # Try alternative method
+            try:
+                await call_py.play(chat_id, track.stream_url)
+            except Exception as alt_error:
+                raise Exception(f"❌ Failed to play: {str(alt_error)}")
 
         active_chats[chat_id] = {
             "track": track,
