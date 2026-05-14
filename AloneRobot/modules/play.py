@@ -18,14 +18,26 @@ from pyrogram.types import (
 )
 from pyrogram.errors import UserAlreadyParticipant, FloodWait
 
-from pytgcalls import PyTgCalls
-from pytgcalls.types import Update
-from pytgcalls.types.stream import StreamAudioEnded
-
 from youtubesearchpython.__future__ import VideosSearch
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
-from AloneRobot.config import API_ID, API_HASH, TOKEN, STRING_SESSION
+from AloneRobot.config import API_ID, API_HASH, TOKEN
+from AloneRobot.modules.call import (
+    call_py,
+    assistant,
+    active_chats,
+    queues,
+    loop_states,
+    progress_tasks,
+    shuffle_states,
+    user_stats,
+    register_stream_end_handler,
+    ensure_assistant,
+    play_audio,
+    pause_stream as call_pause_stream,
+    resume_stream as call_resume_stream,
+    leave_call,
+)
 
 API_BASE = "http://45.77.174.241:9090"
 
@@ -35,22 +47,6 @@ bot = Client(
     api_hash=API_HASH,
     bot_token=TOKEN,
 )
-
-assistant = Client(
-    "AloneRobotAssistant",
-    api_id=API_ID,
-    api_hash=API_HASH,
-    session_string=STRING_SESSION,
-)
-
-call_py = PyTgCalls(assistant)
-
-active_chats: Dict[int, dict] = {}
-queues: Dict[int, List] = {}
-loop_states: Dict[int, int] = {}  # 0: no loop, 1: loop all, 2: loop one
-progress_tasks: Dict[int, asyncio.Task] = {}
-shuffle_states: Dict[int, bool] = {}
-user_stats: Dict[int, dict] = {}  # Track user listening stats
 
 
 @dataclass
@@ -242,21 +238,6 @@ async def generate_thumbnail(track: Track, theme: str = "purple"):
         return None
 
 
-async def ensure_assistant(chat_id: int):
-    """Ensure assistant bot is in the chat"""
-    try:
-        invite = await bot.export_chat_invite_link(chat_id)
-        try:
-            await assistant.join_chat(invite)
-        except UserAlreadyParticipant:
-            pass
-        except Exception:
-            pass
-    except Exception as e:
-        print(f"Error ensuring assistant: {e}")
-        pass
-
-
 async def build_track(query: str, requester: str):
     """Build track object from query"""
     try:
@@ -442,19 +423,10 @@ async def play_track(chat_id: int, track: Track):
     """Play a track"""
     try:
         # Use ffmpeg to play from stream URL
-        try:
-            await call_py.play(
-                chat_id,
-                track.stream_url,
-                volume=100,
-            )
-        except Exception as play_error:
-            print(f"Error during play: {play_error}")
-            # Try alternative method
-            try:
-                await call_py.play(chat_id, track.stream_url)
-            except Exception as alt_error:
-                raise Exception(f"❌ Failed to play: {str(alt_error)}")
+        success = await play_audio(chat_id, track.stream_url, volume=100)
+        
+        if not success:
+            raise Exception("❌ Failed to play track")
 
         active_chats[chat_id] = {
             "track": track,
@@ -497,7 +469,7 @@ async def skip_current(chat_id: int):
         # No more tracks
         if not queues.get(chat_id):
             try:
-                await call_py.leave_call(chat_id)
+                await leave_call(chat_id)
             except Exception:
                 pass
 
@@ -545,11 +517,8 @@ async def previous_track(chat_id: int):
         print(f"Error going to previous track: {e}")
 
 
-@call_py.on_stream_end()
-async def stream_end_handler(_, update: StreamAudioEnded):
-    """Handle stream end event"""
-    chat_id = update.chat_id
-
+async def stream_end_handler(chat_id: int):
+    """Handle stream end event - called from call.py"""
     try:
         await skip_current(chat_id)
     except Exception as e:
@@ -566,7 +535,7 @@ async def play_handler(_, message: Message):
     processing = await message.reply_text("🔄 **Processing...**\n\nSearching for the song...")
 
     try:
-        await ensure_assistant(message.chat.id)
+        await ensure_assistant(bot, message.chat.id)
 
         requester = message.from_user.mention if message.from_user else "Anonymous"
 
@@ -600,7 +569,7 @@ async def pause_handler(_, message: Message):
         if message.chat.id not in active_chats:
             return await message.reply_text("❌ Nothing is playing")
 
-        await call_py.pause_stream(message.chat.id)
+        await call_pause_stream(message.chat.id)
         active_chats[message.chat.id]["state"] = "Paused"
         await message.reply_text("⏸ **Playback paused**")
     except Exception as e:
@@ -614,7 +583,7 @@ async def resume_handler(_, message: Message):
         if message.chat.id not in active_chats:
             return await message.reply_text("❌ Nothing is playing")
 
-        await call_py.resume_stream(message.chat.id)
+        await call_resume_stream(message.chat.id)
         active_chats[message.chat.id]["state"] = "Playing"
         await message.reply_text("▶ **Playback resumed**")
     except Exception as e:
@@ -636,7 +605,7 @@ async def stop_handler(_, message: Message):
             progress_tasks[message.chat.id].cancel()
             progress_tasks.pop(message.chat.id, None)
 
-        await call_py.leave_call(message.chat.id)
+        await leave_call(message.chat.id)
 
         if message.chat.id in active_chats:
             active_chats.pop(message.chat.id)
@@ -843,14 +812,14 @@ async def callbacks(_, query: CallbackQuery):
         if data == "pause":
             if chat_id not in active_chats:
                 return await query.answer("❌ Nothing is playing", show_alert=True)
-            await call_py.pause_stream(chat_id)
+            await call_pause_stream(chat_id)
             active_chats[chat_id]["state"] = "Paused"
             await query.answer("⏸ Paused")
 
         elif data == "resume":
             if chat_id not in active_chats:
                 return await query.answer("❌ Nothing is playing", show_alert=True)
-            await call_py.resume_stream(chat_id)
+            await call_resume_stream(chat_id)
             active_chats[chat_id]["state"] = "Playing"
             await query.answer("▶ Resumed")
 
@@ -861,7 +830,7 @@ async def callbacks(_, query: CallbackQuery):
             if chat_id in progress_tasks:
                 progress_tasks[chat_id].cancel()
                 progress_tasks.pop(chat_id, None)
-            await call_py.leave_call(chat_id)
+            await leave_call(chat_id)
             active_chats.pop(chat_id, None)
             await query.message.edit_caption("⏹ **Playback stopped**")
             await query.answer("⏹ Stopped")
@@ -949,22 +918,6 @@ async def callbacks(_, query: CallbackQuery):
         await query.answer(f"❌ Error: {str(e)}", show_alert=True)
 
 
-async def stream_recovery():
-    """Recover from stream disconnections"""
-    while True:
-        try:
-            for chat_id, data in list(active_chats.items()):
-                try:
-                    await call_py.get_call(chat_id)
-                except Exception:
-                    track: Track = data["track"]
-                    await play_track(chat_id, track)
-        except Exception as e:
-            print(f"Error in stream recovery: {e}")
-
-        await asyncio.sleep(30)
-
-
 async def cleanup_files():
     """Clean up temporary files"""
     while True:
@@ -990,10 +943,15 @@ async def startup():
     """Start the music bot"""
     try:
         await bot.start()
-        await assistant.start()
-        await call_py.start()
-
-        asyncio.create_task(stream_recovery())
+        
+        # Start call system
+        from AloneRobot.modules.call import start_call_system, stream_recovery_task
+        await start_call_system()
+        
+        # Register stream end handler
+        await register_stream_end_handler(stream_end_handler)
+        
+        asyncio.create_task(stream_recovery_task())
         asyncio.create_task(cleanup_files())
 
         print("🎵 Music system started successfully")
