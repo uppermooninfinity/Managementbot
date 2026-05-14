@@ -519,7 +519,7 @@ async def stream_end_handler(chat_id: int):
         print(f"Error in stream end handler: {e}")
 
 
-@bot.on_message(filters.command("play"))
+@alone.on_message(filters.command("play"))
 async def play_handler(_, message: Message):
     """Handle /play command"""
     if len(message.command) < 2:
@@ -963,3 +963,5 @@ async def idle():
 
 if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(startup())
+
+print("🎶 loaded snowy music ")
