@@ -130,7 +130,7 @@ def chatbot(update: Update, context: CallbackContext):
         bot.send_chat_action(chat_id, action="typing")
         url=f"https://alonexrobot.vercel.app/api/apikey={CHATBOT_API}/group-controller/alone/message={message.text}"
         response = requests.get(url)
-        out=response.json()
+        out= await response.json()
         reply=out["reply"]
         message.reply_text(reply)
 
